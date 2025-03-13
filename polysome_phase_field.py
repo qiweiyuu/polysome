@@ -42,6 +42,9 @@ parser.add_argument("--Vp", type=float, default=5)
 parser.add_argument(
     "--T", type=float, default=2400, help="total elongation time (in s)"
 )
+parser.add_argument(
+    "--T-init", type=float, default=6000, help="total initialization time (in s)"
+)
 parser.add_argument("--dt", type=float, default=0.01, help="time step (in s)")
 parser.add_argument(
     "--l-center", type=float, default=0.3, help="initial nucleoid length "
@@ -65,10 +68,17 @@ parser.add_argument(
     help="file name for the initial condition",
 )
 parser.add_argument("--l-init", type=float, default=2.0, help="initial cell length ")
-parser.add_argument("--l-final", type=float, default=3.5, help="final cell length ")
+parser.add_argument("--gamma", type=float, default=3.5, help="growth (dilution) rate ")
+# parser.add_argument("--l-final", type=float, default=3.5, help="final cell length ")
 
 parser.add_argument(
     "--l-decay", type=float, default=2.0 / 16, help="decay length of degradation rate"
+)
+parser.add_argument(
+    "--fix-length",
+    action=argparse.BooleanOptionalAction,
+    help="fix the cell length",
+    default=False,
 )
 
 
@@ -84,9 +94,10 @@ v_molecule = np.array([flags.Vp, flags.Vn])
 
 # total cell length
 l_init = flags.l_init
-l_final = flags.l_final
+# l_final = flags.l_final
 T = flags.T
-gamma = onp.log(l_final / l_init) / T
+gamma = onp.log(2) / T
+# gamma = flags.gamma
 l_t_fun = lambda t: l_init * onp.exp(gamma * t)
 
 ############################################################################################################
@@ -227,7 +238,8 @@ else:
     )
 
     dt = flags.dt
-    N_steps = int(6000 / dt)
+    N_steps = int(flags.T_init / dt)
+    t_trace = np.arange(N_steps) * dt
 
     def sub_run(vals, i):
         vals = calc_step(
@@ -246,40 +258,52 @@ else:
         sub_run, (phit_init.copy(), np.fft.fft(phit_init)), np.arange(N_steps), unroll=4
     )
 
-############################################################################################################
-## elongation
-
-dt = flags.dt
-N_steps = int(T / dt)
-
-t_trace = np.arange(N_steps) * dt
-l_trace = np.array(l_t_fun(t_trace))
-
-
-def sub_run(vals, i):
-    vals = calc_step(
-        vals[0],
-        vals[1],
-        dt,
-        Dp=Dp / l_trace[i] ** 2,
-        Dn=Dn / l_trace[i] ** 2,
-        k1=flags.k1,
-        kn1=flags.kn1 + gamma,
-        lmda2=flags.lmda**2 / l_trace[i] ** 2,
+    # save the simulation results
+    steps_skip = min(200, N_steps // 200)
+    np.savez(
+        flags.filename + f"phi_init.npz",
+        phi_trace=phi_init_trace[::steps_skip],
+        t_trace=t_trace[::steps_skip],
+        l_init=l_init,
     )
-    return vals, vals[0]
 
+if flags.fix_length:
+    print("Only simulate at fixed length")
+else:
+    print("Simulate with growth")
 
-(phit, phit_fft), phi_trace = lax.scan(
-    sub_run, (phi_init_ss, phi_init_ss_fft), np.arange(N_steps), unroll=4
-)
+    ############################################################################################################
+    ## elongation
 
-############################################################################################################
-# save the simulation results
-steps_skip = min(200, N_steps // 200)
-np.savez(
-    flags.filename + f"phi_grow.npz",
-    phi_trace=phi_trace[::steps_skip],
-    t_trace=t_trace[::steps_skip],
-    l_trace=l_trace[::steps_skip],
-)
+    dt = flags.dt
+    N_steps = int(T / dt)
+
+    t_trace = np.arange(N_steps) * dt
+    l_trace = np.array(l_t_fun(t_trace))
+
+    def sub_run(vals, i):
+        vals = calc_step(
+            vals[0],
+            vals[1],
+            dt,
+            Dp=Dp / l_trace[i] ** 2,
+            Dn=Dn / l_trace[i] ** 2,
+            k1=flags.k1,
+            kn1=flags.kn1 + gamma,
+            lmda2=flags.lmda**2 / l_trace[i] ** 2,
+        )
+        return vals, vals[0]
+
+    (phit, phit_fft), phi_trace = lax.scan(
+        sub_run, (phi_init_ss, phi_init_ss_fft), np.arange(N_steps), unroll=4
+    )
+
+    ############################################################################################################
+    # save the simulation results
+    steps_skip = min(200, N_steps // 200)
+    np.savez(
+        flags.filename + f"phi_grow.npz",
+        phi_trace=phi_trace[::steps_skip],
+        t_trace=t_trace[::steps_skip],
+        l_trace=l_trace[::steps_skip],
+    )
