@@ -10,4 +10,4 @@ This repository contains the following:
 + `polysome_phase_field.py`: the main script that simulates the model.
 + `Fig4.ipynb`: a Jupyter notebook to reproduce the main results in Figure 4.
 + `mixed_polysome.ipynb`: a Jupyter notebook to reproduce Figure 4, supplement 4, which considers multiple polysome species.
-+ 'ectopic.ipynb': a Jupyter notebook to reproduce Figure 7, supplement 2, which considers ectopic polysome production. 
++ `ectopic.ipynb': a Jupyter notebook to reproduce Figure 7, supplement 2, which considers ectopic polysome production. 
