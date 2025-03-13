@@ -8,4 +8,6 @@ The model takes into account two ingredients important for nucleoid segregation:
 
 This repository contains the following:
 + `polysome_phase_field.py`: the main script that simulates the model.
-+ `Fig4.ipynb`: a Jupyter notebook that demonstrates how to use the script to reproduce the results in Figure 4.
++ `Fig4.ipynb`: a Jupyter notebook to reproduce the main results in Figure 4.
++ `mixed_polysome.ipynb`: a Jupyter notebook to reproduce Figure 4, supplement 4, which considers multiple polysome species.
++ 'ectopic.ipynb': a Jupyter notebook to reproduce Figure 7, supplement 2, which considers ectopic polysome production. 
